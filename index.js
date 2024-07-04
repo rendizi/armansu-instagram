@@ -36,9 +36,14 @@ let result = 0;
     let userCount = 0;
 
     while (nextPage) {
+      //add there another try catchers
       page += 1;
       console.log(`Page num ${page}`);
-      const currentPage = await armanFollowingsFeed.items();
+      try{
+        const currentPage = await armanFollowingsFeed.items();
+      }catch (err){
+        nextPage = armanFollowingsFeed.isMoreAvailable();
+      }
       allFollowings = allFollowings.concat(currentPage);
 
       for (const user of currentPage) {
