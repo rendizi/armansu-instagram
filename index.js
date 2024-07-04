@@ -27,19 +27,18 @@ let result = 0; // Variable to accumulate story metrics
 
 (async () => {
   try {
-    // Connect to Redis and handle connection errors
+    // Handle Redis connection errors
     redisClient.on('error', (err) => {
       console.error('Redis error:', err);
       process.exit(1); // Exit if Redis connection fails
     });
 
-    await redisClient.connect();
-    console.log('Connected to Redis');
+    console.log('Connecting to Redis...');
 
     // Instagram login flow
     await ig.simulate.preLoginFlow();
     const loggedInUser = await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
-    process.nextTick(async () => await ig.simulate.postLoginFlow());
+    await ig.simulate.postLoginFlow();
 
     console.log(`Logged in as ${loggedInUser.username}`);
 
@@ -104,7 +103,11 @@ let result = 0; // Variable to accumulate story metrics
                 result += 8; // Arbitrary metric for images
               } else if (story.media_type === 2 && story.video_versions) {
                 console.log(`  Video URL: ${story.video_versions[0].url}`);
-                result += story.video_duration || 0; // Metric for video duration
+                const viddur = story.video_duration || 0; // Metric for video duration
+                if (viddur == 0){
+                  console.log("Video duretion is 0")
+                }
+                result += viddur
               }
             });
           }
@@ -145,7 +148,12 @@ let result = 0; // Variable to accumulate story metrics
     console.error('An error occurred:', error);
   } finally {
     // Disconnect from Redis
-    redisClient.quit();
-    console.log('Redis client disconnected');
+    redisClient.quit((err) => {
+      if (err) {
+        console.error('Error disconnecting from Redis:', err);
+      } else {
+        console.log('Redis client disconnected');
+      }
+    });
   }
 })();
