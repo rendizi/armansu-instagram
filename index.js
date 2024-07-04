@@ -30,7 +30,6 @@ let result = 0; // Variable to accumulate story metrics
     // Handle Redis connection errors
     redisClient.on('error', (err) => {
       console.error('Redis error:', err);
-      process.exit(1); // Exit if Redis connection fails
     });
 
     console.log('Connecting to Redis...');
@@ -38,9 +37,9 @@ let result = 0; // Variable to accumulate story metrics
     // Instagram login flow
     await ig.simulate.preLoginFlow();
     const loggedInUser = await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
-
-    console.log(`Logged in as ${loggedInUser.username}`);
     process.nextTick(async () => await ig.simulate.postLoginFlow());
+    console.log(`Logged in as ${loggedInUser.username}`);
+    await ig.simulate.postLoginFlow();
 
     // Fetch followings for a specific user
     const armanId = await ig.user.getIdByUsername('armansu');
@@ -50,7 +49,6 @@ let result = 0; // Variable to accumulate story metrics
     let nextPage = true;
     let page = 0;
     let userCount = 0;
-    let retries = 0;
     const maxRetries = 3; // Maximum retries for handling errors
 
     // Loop through pages of followings
@@ -59,29 +57,25 @@ let result = 0; // Variable to accumulate story metrics
       console.log(`Fetching page number ${page}`);
 
       let currentPage = [];
-      try {
-        currentPage = await armanFollowingsFeed.items();
-        nextPage = armanFollowingsFeed.isMoreAvailable();
+      let retries = 0;
 
-        if (currentPage.length === 0) {
-          console.log('No more items fetched, stopping.');
-          nextPage = false; // Stop pagination if no items are fetched
-        } else {
-          // Reset retry counter on successful fetch
-          retries = 0;
-        }
+      while (retries < maxRetries) {
+        try {
+          currentPage = await armanFollowingsFeed.items();
+          nextPage = armanFollowingsFeed.isMoreAvailable();
+          break; // Break out of retry loop on success
 
-      } catch (err) {
-        console.error(`Error fetching followings for page ${page}:`, err);
-        retries += 1;
+        } catch (err) {
+          console.error(`Error fetching followings for page ${page}:`, err);
+          retries += 1;
 
-        if (retries >= maxRetries) {
-          console.log(`Max retries reached. Stopping pagination after ${page} pages.`);
-          nextPage = false; // Stop pagination after maximum retries
-        } else {
-          console.log(`Retrying... (attempt ${retries} of ${maxRetries})`);
-          await sleep(5000); // Sleep for 5 seconds before retrying
-          nextPage = true; // Continue trying to fetch the same page
+          if (retries >= maxRetries) {
+            console.log(`Max retries reached. Stopping pagination after ${page} pages.`);
+            nextPage = false; // Stop pagination after maximum retries
+          } else {
+            console.log(`Retrying... (attempt ${retries} of ${maxRetries})`);
+            await sleep(5000 * retries); // Exponential backoff for retry
+          }
         }
       }
 
@@ -104,10 +98,7 @@ let result = 0; // Variable to accumulate story metrics
               } else if (story.media_type === 2 && story.video_versions) {
                 console.log(`  Video URL: ${story.video_versions[0].url}`);
                 const viddur = story.video_duration || 0; // Metric for video duration
-                if (viddur == 0){
-                  console.log("Video duretion is 0")
-                }
-                result += viddur
+                result += viddur;
               }
             });
           }
