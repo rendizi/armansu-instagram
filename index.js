@@ -71,7 +71,7 @@ let result = 0;
             }
           }
 
-          const randomSleep = randomInt(1000, 3000);
+          const randomSleep = randomInt(1000, 10000);
           console.log(`Sleeping for ${randomSleep} ms...`);
           await sleep(randomSleep);
 
