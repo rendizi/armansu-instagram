@@ -38,9 +38,9 @@ let result = 0; // Variable to accumulate story metrics
     // Instagram login flow
     await ig.simulate.preLoginFlow();
     const loggedInUser = await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
-    await ig.simulate.postLoginFlow();
 
     console.log(`Logged in as ${loggedInUser.username}`);
+    process.nextTick(async () => await ig.simulate.postLoginFlow());
 
     // Fetch followings for a specific user
     const armanId = await ig.user.getIdByUsername('armansu');
