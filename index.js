@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import redis from 'redis';
 import { promisify } from 'util';
 import { randomInt } from 'crypto';
+import { log } from 'console';
 
 dotenv.config();
 
@@ -39,10 +40,8 @@ let result = 0; // Variable to accumulate story metrics
     const loggedInUser = await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
     process.nextTick(async () => await ig.simulate.postLoginFlow());
     console.log(`Logged in as ${loggedInUser.username}`);
-    await ig.simulate.postLoginFlow();
 
-    // Fetch followings for a specific user
-    const armanId = await ig.user.getIdByUsername('armansu');
+    const armanId = await ig.user.getIdByUsername("armansu");
     const armanFollowingsFeed = ig.feed.accountFollowing(armanId);
 
     let allFollowings = [];
@@ -63,10 +62,10 @@ let result = 0; // Variable to accumulate story metrics
         try {
           currentPage = await armanFollowingsFeed.items();
           nextPage = armanFollowingsFeed.isMoreAvailable();
-          break; // Break out of retry loop on success
+          break;
 
         } catch (err) {
-          console.error(`Error fetching followings for page ${page}:`, err);
+          console.log(`Error fetching followings for page ${page}:`, err);
           retries += 1;
 
           if (retries >= maxRetries) {
@@ -79,14 +78,18 @@ let result = 0; // Variable to accumulate story metrics
         }
       }
 
-      // Add fetched users to the complete list
       allFollowings = allFollowings.concat(currentPage);
 
-      // Process each user in the current page
       for (const user of currentPage) {
         try {
+          if (user.is_private){
+            continue
+          }
+          console.log(user)
           const storyFeed = ig.feed.userStory(user.pk);
+          console.log(storyFeed)
           const userStories = await storyFeed.items();
+          console.log(userStories)
 
           if (userStories && userStories.length > 0) {
             console.log(`Stories of ${user.username}`);
@@ -111,7 +114,7 @@ let result = 0; // Variable to accumulate story metrics
               await redisSetAsync(`story_result_${userCount}`, result);
               console.log(`Stored result in Redis for ${userCount} users: ${result}`);
             } catch (redisError) {
-              console.error(`Error storing result in Redis for user ${user.username}:`, redisError);
+              console.log(`Error storing result in Redis for user ${user.username}:`, redisError);
             }
           }
 
@@ -121,7 +124,7 @@ let result = 0; // Variable to accumulate story metrics
           await sleep(randomSleep);
 
         } catch (storyError) {
-          console.error(`Error fetching stories for user ${user.username}:`, storyError);
+          console.log(`Error fetching stories for user ${user.username}:`, storyError);
         }
       }
     }
@@ -131,17 +134,17 @@ let result = 0; // Variable to accumulate story metrics
       await redisSetAsync(`story_result_${userCount}`, result);
       console.log(`Final stored result in Redis for ${userCount} users: ${result}`);
     } catch (finalRedisError) {
-      console.error(`Error storing final result in Redis:`, finalRedisError);
+      console.log(`Error storing final result in Redis:`, finalRedisError);
     }
 
     console.log(`Sum of all story metrics: ${result}`);
   } catch (error) {
-    console.error('An error occurred:', error);
+    console.log('An error occurred:', error);
   } finally {
     // Disconnect from Redis
     redisClient.quit((err) => {
       if (err) {
-        console.error('Error disconnecting from Redis:', err);
+        console.log('Error disconnecting from Redis:', err);
       } else {
         console.log('Redis client disconnected');
       }
