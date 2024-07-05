@@ -61,6 +61,7 @@ let result = 0;
           nextPage = armanFollowingsFeed.isMoreAvailable();
           break;
 
+          //fewuni
         } catch (err) {
           console.log(`Error fetching followings for page ${page}:`, err);
           retries += 1;
