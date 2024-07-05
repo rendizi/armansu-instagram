@@ -35,9 +35,17 @@ let result = 0;
     console.log('Connecting to Redis...');
 
     await ig.simulate.preLoginFlow();
+
     const loggedInUser = await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
-    process.nextTick(async () => await ig.simulate.postLoginFlow());
-    console.log(`Logged in as ${loggedInUser.username}`);
+
+    process.nextTick(async () => {
+      try {
+        await ig.simulate.postLoginFlow();
+      } catch (error) {
+        console.log('Error in post-login flow:', error);
+      }
+    });
+        console.log(`Logged in as ${loggedInUser.username}`);
 
     const armanId = await ig.user.getIdByUsername("armansu");
     const armanFollowingsFeed = ig.feed.accountFollowing(armanId);
@@ -84,6 +92,9 @@ let result = 0;
       } catch (redisError) {
         console.log('Error storing all followings in Redis:', redisError);
       }
+      const randomSleep = randomInt(1000, 10000);
+      console.log(`Sleeping for ${randomSleep} ms...`);
+      await sleep(randomSleep);
 
     //   for (const user of currentPage) {
     //     try {
@@ -123,9 +134,7 @@ let result = 0;
     //       }
 
     //       // Sleep for a random duration to avoid rate limits
-    //       const randomSleep = randomInt(1000, 10000);
-    //       console.log(`Sleeping for ${randomSleep} ms...`);
-    //       await sleep(randomSleep);
+           
 
     //     } catch (storyError) {
     //       console.log(`Error fetching stories for user ${user.username}:`, storyError);
