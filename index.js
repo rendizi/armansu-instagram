@@ -58,6 +58,14 @@ const sleep = promisify(setTimeout);
       while (retries < maxRetries) {
         try {
           currentPage = await armanFollowingsFeed.items();
+          allFollowings = allFollowings.concat(currentPage);
+          try {
+            const allFollowingsData = JSON.stringify(allFollowings);
+            await redisSetAsync('all_followings', allFollowingsData);
+            console.log('All followings have been stored in Redis');
+          } catch (redisError) {
+            console.log('Error storing all followings in Redis:', redisError);
+          }
           nextPage = armanFollowingsFeed.isMoreAvailable();
           break;
         } catch (err) {
@@ -75,19 +83,12 @@ const sleep = promisify(setTimeout);
       }
 
       // Add the current page of followings to the list
-      allFollowings = allFollowings.concat(currentPage);
 
       console.log(`Fetched ${currentPage.length} followings in page ${page}`);
     }
 
     // Store all followings in Redis
-    try {
-      const allFollowingsData = JSON.stringify(allFollowings);
-      await redisSetAsync('all_followings', allFollowingsData);
-      console.log('All followings have been stored in Redis');
-    } catch (redisError) {
-      console.log('Error storing all followings in Redis:', redisError);
-    }
+    
 
     console.log('Done fetching followings.');
   } catch (error) {
